@@ -2,99 +2,212 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Orb Collector 3D</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       background: #0a0a12;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       color: #e0e0ff;
       user-select: none;
       touch-action: none;
+      position: fixed;
+      inset: 0;
     }
     #canvas-container {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       position: relative;
     }
     canvas { display: block; width: 100%; height: 100%; }
+
+    /* Top HUD */
     #ui {
       position: absolute;
       top: 0; left: 0; right: 0;
-      padding: 16px 20px;
+      padding: max(12px, env(safe-area-inset-top)) 14px 0;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       pointer-events: none;
       z-index: 10;
-      background: linear-gradient(to bottom, rgba(10,10,20,0.7), transparent);
+      gap: 8px;
     }
     .stat {
-      background: rgba(20, 20, 40, 0.75);
-      backdrop-filter: blur(8px);
+      background: rgba(20, 20, 40, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(120, 100, 255, 0.35);
       border-radius: 12px;
-      padding: 10px 16px;
-      font-size: 1.05rem;
+      padding: 8px 12px;
+      font-size: clamp(0.85rem, 3.5vw, 1.05rem);
       font-weight: 600;
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      white-space: nowrap;
     }
     .stat span { color: #a78bfa; }
+
+    /* Instructions (desktop / first load) */
     #instructions {
       position: absolute;
-      bottom: 24px;
+      bottom: max(110px, calc(env(safe-area-inset-bottom) + 100px));
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 15, 30, 0.85);
+      background: rgba(15, 15, 30, 0.88);
       border: 1px solid rgba(139, 92, 246, 0.4);
-      border-radius: 16px;
-      padding: 14px 24px;
-      font-size: 0.95rem;
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-size: clamp(0.75rem, 3vw, 0.95rem);
       text-align: center;
       pointer-events: none;
       z-index: 10;
-      max-width: 90vw;
-      line-height: 1.5;
+      max-width: 92vw;
+      line-height: 1.4;
+      transition: opacity 0.4s;
     }
+    #instructions.hidden { opacity: 0; }
     #instructions kbd {
       display: inline-block;
       background: rgba(139, 92, 246, 0.25);
       border: 1px solid rgba(167, 139, 250, 0.5);
-      border-radius: 6px;
-      padding: 2px 8px;
-      font-family: inherit;
+      border-radius: 5px;
+      padding: 1px 6px;
       font-size: 0.85em;
-      margin: 0 2px;
     }
+
+    /* ——— Mobile controls (Roblox-style) ——— */
+    #mobile-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+      display: none; /* shown only on touch devices */
+    }
+    #mobile-controls.visible {
+      display: block;
+    }
+
+    /* Left joystick zone */
+    #joystick-zone {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 48%;
+      height: 45%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #joystick-base {
+      position: absolute;
+      width: clamp(110px, 28vw, 150px);
+      height: clamp(110px, 28vw, 150px);
+      border-radius: 50%;
+      background: rgba(30, 30, 55, 0.55);
+      border: 2px solid rgba(167, 139, 250, 0.45);
+      left: max(16px, env(safe-area-inset-left));
+      bottom: max(20px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+    #joystick-knob {
+      width: 48%;
+      height: 48%;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #a78bfa, #7c3aed);
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.5);
+      position: absolute;
+      transform: translate(-50%, -50%);
+      left: 50%;
+      top: 50%;
+      transition: none;
+    }
+    #joystick-knob.active {
+      background: linear-gradient(145deg, #c4b5fd, #8b5cf6);
+    }
+
+    /* Right side buttons */
+    #action-buttons {
+      position: absolute;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+    }
+    .action-btn {
+      width: clamp(64px, 16vw, 80px);
+      height: clamp(64px, 16vw, 80px);
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(30, 30, 55, 0.65);
+      color: #e0e0ff;
+      font-size: clamp(0.7rem, 3vw, 0.85rem);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .action-btn:active,
+    .action-btn.pressed {
+      transform: scale(0.92);
+      background: rgba(124, 58, 237, 0.55);
+      border-color: rgba(167, 139, 250, 0.7);
+    }
+    #jump-btn {
+      background: linear-gradient(145deg, rgba(99, 102, 241, 0.7), rgba(79, 70, 229, 0.75));
+      border-color: rgba(165, 180, 252, 0.5);
+    }
+    #jump-btn.pressed {
+      background: linear-gradient(145deg, rgba(129, 140, 248, 0.85), rgba(99, 102, 241, 0.9));
+    }
+    .action-btn .icon {
+      font-size: clamp(1.3rem, 5vw, 1.7rem);
+      line-height: 1;
+    }
+
+    /* Overlay screens */
     #overlay {
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse at center, rgba(15,10,40,0.92), rgba(5,5,15,0.97));
+      background: radial-gradient(ellipse at center, rgba(15,10,40,0.94), rgba(5,5,15,0.98));
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 20;
-      transition: opacity 0.4s ease;
+      z-index: 30;
+      transition: opacity 0.35s ease;
+      padding: 20px;
     }
     #overlay.hidden { opacity: 0; pointer-events: none; }
     #overlay h1 {
-      font-size: clamp(2.2rem, 8vw, 3.8rem);
+      font-size: clamp(1.8rem, 7vw, 3.2rem);
       font-weight: 800;
       background: linear-gradient(135deg, #c4b5fd, #818cf8, #a78bfa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 8px;
-      letter-spacing: -1px;
+      margin-bottom: 10px;
+      text-align: center;
     }
     #overlay p {
-      font-size: 1.15rem;
-      opacity: 0.85;
-      margin-bottom: 28px;
-      max-width: 420px;
+      font-size: clamp(0.95rem, 3.5vw, 1.15rem);
+      opacity: 0.88;
+      margin-bottom: 24px;
+      max-width: 380px;
       text-align: center;
       line-height: 1.5;
     }
@@ -104,25 +217,31 @@
       color: white;
       border: none;
       border-radius: 14px;
-      padding: 16px 42px;
-      font-size: 1.2rem;
+      padding: 14px 36px;
+      font-size: clamp(1.05rem, 4vw, 1.25rem);
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 8px 30px rgba(124, 58, 237, 0.45);
-      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 8px 28px rgba(124, 58, 237, 0.45);
+      min-height: 52px;
+      min-width: 140px;
     }
-    #start-btn:hover, #restart-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 36px rgba(124, 58, 237, 0.55);
+    #start-btn:active, #restart-btn:active {
+      transform: scale(0.96);
     }
     #final-score {
-      font-size: 1.6rem;
-      margin-bottom: 20px;
+      font-size: clamp(1.3rem, 5vw, 1.6rem);
+      margin-bottom: 18px;
       color: #c4b5fd;
       font-weight: 600;
     }
     #game-over { display: none; }
     #game-over.visible { display: flex; flex-direction: column; align-items: center; }
+
+    /* Desktop-only hint */
+    @media (hover: hover) and (pointer: fine) {
+      #mobile-controls { display: none !important; }
+      #instructions { bottom: 28px; }
+    }
   </style>
 </head>
 <body>
@@ -132,16 +251,32 @@
       <div class="stat">Temps : <span id="time">60</span>s</div>
       <div class="stat">Orbes : <span id="orbs">0</span></div>
     </div>
+
     <div id="instructions">
-      <kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou flèches pour bouger ·
-      <kbd>Espace</kbd> pour sauter · Collecte les orbes violettes !
+      <span class="desktop-only"><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou flèches · <kbd>Espace</kbd> sauter</span>
+      <span class="mobile-only" style="display:none">Joystick gauche = bouger · Bouton droit = sauter</span>
+    </div>
+
+    <!-- Roblox-style mobile controls -->
+    <div id="mobile-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+      <div id="action-buttons">
+        <button id="jump-btn" class="action-btn" type="button" aria-label="Sauter">
+          <span class="icon">⬆</span>
+          <span>Sauter</span>
+        </button>
+      </div>
     </div>
   </div>
 
   <div id="overlay">
     <div id="start-screen">
       <h1>Orb Collector 3D</h1>
-      <p>Course dans un monde 3D, collectez le maximum d'orbes avant la fin du temps. Évitez les obstacles rouges !</p>
+      <p>Collectez le maximum d'orbes violettes avant la fin du temps. Évitez les obstacles rouges !</p>
       <button id="start-btn">Jouer</button>
     </div>
     <div id="game-over">
@@ -154,8 +289,7 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
     }
   }
   </script>
@@ -181,7 +315,26 @@
     let velocityY = 0;
     let isGrounded = true;
 
-    // ——— Scene setup ———
+    // Joystick state (Roblox-style continuous input)
+    let joyActive = false;
+    let joyDX = 0; // -1 .. 1
+    let joyDZ = 0;
+    let jumpPressed = false;
+
+    // Detect touch / mobile
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const mobileControls = document.getElementById('mobile-controls');
+    const instructions = document.getElementById('instructions');
+
+    if (isTouchDevice) {
+      mobileControls.classList.add('visible');
+      const desktopHint = instructions.querySelector('.desktop-only');
+      const mobileHint = instructions.querySelector('.mobile-only');
+      if (desktopHint) desktopHint.style.display = 'none';
+      if (mobileHint) mobileHint.style.display = 'inline';
+    }
+
+    // ——— Scene ———
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0a18);
@@ -198,13 +351,11 @@
     container.appendChild(renderer.domElement);
 
     // Lights
-    const ambient = new THREE.AmbientLight(0x404060, 1.2);
-    scene.add(ambient);
-
+    scene.add(new THREE.AmbientLight(0x404060, 1.2));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
     dirLight.position.set(20, 40, 15);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.mapSize.set(1024, 1024);
     dirLight.shadow.camera.near = 1;
     dirLight.shadow.camera.far = 100;
     dirLight.shadow.camera.left = -40;
@@ -212,42 +363,31 @@
     dirLight.shadow.camera.top = 40;
     dirLight.shadow.camera.bottom = -40;
     scene.add(dirLight);
-
-    const hemi = new THREE.HemisphereLight(0x8899ff, 0x223344, 0.6);
-    scene.add(hemi);
+    scene.add(new THREE.HemisphereLight(0x8899ff, 0x223344, 0.6));
 
     // Ground
-    const groundGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a2e,
-      roughness: 0.85,
-      metalness: 0.15,
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 32, 32),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.85, metalness: 0.15 })
+    );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Grid helper subtle
     const grid = new THREE.GridHelper(WORLD_SIZE, 40, 0x2a2a4a, 0x1a1a30);
     grid.position.y = 0.01;
     scene.add(grid);
 
     // Player
-    const playerGeo = new THREE.SphereGeometry(0.7, 32, 32);
-    const playerMat = new THREE.MeshStandardMaterial({
-      color: 0x60a5fa,
-      emissive: 0x1e3a8a,
-      emissiveIntensity: 0.35,
-      roughness: 0.3,
-      metalness: 0.6,
-    });
-    const player = new THREE.Mesh(playerGeo, playerMat);
+    const player = new THREE.Mesh(
+      new THREE.SphereGeometry(0.7, 32, 32),
+      new THREE.MeshStandardMaterial({
+        color: 0x60a5fa, emissive: 0x1e3a8a, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.6
+      })
+    );
     player.position.set(0, 0.7, 0);
     player.castShadow = true;
     scene.add(player);
-
-    // Player glow
     const playerGlow = new THREE.PointLight(0x60a5fa, 1.2, 8);
     player.add(playerGlow);
 
@@ -255,62 +395,43 @@
     const orbs = [];
     const orbGeo = new THREE.IcosahedronGeometry(0.45, 1);
     const orbMat = new THREE.MeshStandardMaterial({
-      color: 0xc084fc,
-      emissive: 0x7c3aed,
-      emissiveIntensity: 0.9,
-      roughness: 0.2,
-      metalness: 0.4,
+      color: 0xc084fc, emissive: 0x7c3aed, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.4
     });
 
     function spawnOrb() {
       const orb = new THREE.Mesh(orbGeo, orbMat.clone());
       const angle = Math.random() * Math.PI * 2;
       const radius = 5 + Math.random() * (WORLD_SIZE / 2 - 8);
-      orb.position.set(
-        Math.cos(angle) * radius,
-        0.6 + Math.random() * 1.5,
-        Math.sin(angle) * radius
-      );
+      orb.position.set(Math.cos(angle) * radius, 0.6 + Math.random() * 1.5, Math.sin(angle) * radius);
       orb.userData = { baseY: orb.position.y, phase: Math.random() * Math.PI * 2 };
       orb.castShadow = true;
       scene.add(orb);
       orbs.push(orb);
-
-      // light
       const light = new THREE.PointLight(0xc084fc, 0.8, 6);
       orb.add(light);
     }
-
     for (let i = 0; i < ORB_COUNT; i++) spawnOrb();
 
     // Obstacles
     const obstacles = [];
     const obsGeo = new THREE.BoxGeometry(1.6, 2.2, 1.6);
     const obsMat = new THREE.MeshStandardMaterial({
-      color: 0xef4444,
-      emissive: 0x7f1d1d,
-      emissiveIntensity: 0.4,
-      roughness: 0.5,
+      color: 0xef4444, emissive: 0x7f1d1d, emissiveIntensity: 0.4, roughness: 0.5
     });
-
     for (let i = 0; i < OBSTACLE_COUNT; i++) {
       const obs = new THREE.Mesh(obsGeo, obsMat);
       const angle = Math.random() * Math.PI * 2;
       const radius = 8 + Math.random() * (WORLD_SIZE / 2 - 12);
-      obs.position.set(
-        Math.cos(angle) * radius,
-        1.1,
-        Math.sin(angle) * radius
-      );
+      obs.position.set(Math.cos(angle) * radius, 1.1, Math.sin(angle) * radius);
       obs.castShadow = true;
       obs.receiveShadow = true;
       scene.add(obs);
       obstacles.push(obs);
     }
 
-    // Particles (stars)
+    // Stars
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 400;
+    const starCount = 300;
     const positions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
       positions[i * 3] = (Math.random() - 0.5) * 180;
@@ -318,15 +439,13 @@
       positions[i * 3 + 2] = (Math.random() - 0.5) * 180;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.25, transparent: true, opacity: 0.8 });
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.25, transparent: true, opacity: 0.8 })));
 
-    // Camera follow
+    // Camera
     const cameraOffset = new THREE.Vector3(0, 10, 14);
     const cameraLook = new THREE.Vector3();
 
-    // UI elements
+    // UI
     const scoreEl = document.getElementById('score');
     const timeEl = document.getElementById('time');
     const orbsEl = document.getElementById('orbs');
@@ -335,43 +454,141 @@
     const gameOverScreen = document.getElementById('game-over');
     const finalScoreEl = document.getElementById('final-score');
 
-    // Input
+    // ——— Keyboard ———
     window.addEventListener('keydown', e => {
       keys[e.code] = true;
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-        e.preventDefault();
-      }
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-    // Touch controls (simple virtual pad for mobile)
-    let touchStartX = 0, touchStartY = 0;
-    let touchDx = 0, touchDy = 0;
-    renderer.domElement.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchDx = 0; touchDy = 0;
+    // ——— Roblox-style Virtual Joystick ———
+    const joyZone = document.getElementById('joystick-zone');
+    const joyBase = document.getElementById('joystick-base');
+    const joyKnob = document.getElementById('joystick-knob');
+    let joyRadius = 0;
+    let joyCenterX = 0;
+    let joyCenterY = 0;
+    let activeTouchId = null;
+
+    function updateJoyMetrics() {
+      const rect = joyBase.getBoundingClientRect();
+      joyRadius = rect.width / 2;
+      joyCenterX = rect.left + joyRadius;
+      joyCenterY = rect.top + joyRadius;
+    }
+
+    function setKnobPosition(dx, dy) {
+      const max = joyRadius * 0.55;
+      const dist = Math.hypot(dx, dy);
+      let nx = dx, ny = dy;
+      if (dist > max) {
+        nx = (dx / dist) * max;
+        ny = (dy / dist) * max;
       }
-    }, { passive: true });
-    renderer.domElement.addEventListener('touchmove', e => {
-      if (e.touches.length === 1) {
-        touchDx = (e.touches[0].clientX - touchStartX) / 40;
-        touchDy = (e.touches[0].clientY - touchStartY) / 40;
+      joyKnob.style.left = `calc(50% + ${nx}px)`;
+      joyKnob.style.top = `calc(50% + ${ny}px)`;
+      // Normalized -1..1 (Y inverted for movement: up = negative Z)
+      joyDX = nx / max;
+      joyDZ = ny / max;
+    }
+
+    function resetJoystick() {
+      joyActive = false;
+      joyDX = 0;
+      joyDZ = 0;
+      activeTouchId = null;
+      joyKnob.style.left = '50%';
+      joyKnob.style.top = '50%';
+      joyKnob.classList.remove('active');
+    }
+
+    joyZone.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (activeTouchId !== null) return;
+      const t = e.changedTouches[0];
+      activeTouchId = t.identifier;
+      updateJoyMetrics();
+      joyActive = true;
+      joyKnob.classList.add('active');
+      setKnobPosition(t.clientX - joyCenterX, t.clientY - joyCenterY);
+    }, { passive: false });
+
+    joyZone.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === activeTouchId) {
+          setKnobPosition(t.clientX - joyCenterX, t.clientY - joyCenterY);
+          break;
+        }
       }
-    }, { passive: true });
-    renderer.domElement.addEventListener('touchend', () => {
-      touchDx = 0; touchDy = 0;
+    }, { passive: false });
+
+    joyZone.addEventListener('touchend', e => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === activeTouchId) {
+          resetJoystick();
+          break;
+        }
+      }
     });
+    joyZone.addEventListener('touchcancel', resetJoystick);
+
+    // Also support mouse for testing on desktop
+    let mouseDown = false;
+    joyZone.addEventListener('mousedown', e => {
+      if (!isTouchDevice) {
+        mouseDown = true;
+        updateJoyMetrics();
+        joyActive = true;
+        joyKnob.classList.add('active');
+        setKnobPosition(e.clientX - joyCenterX, e.clientY - joyCenterY);
+      }
+    });
+    window.addEventListener('mousemove', e => {
+      if (mouseDown) setKnobPosition(e.clientX - joyCenterX, e.clientY - joyCenterY);
+    });
+    window.addEventListener('mouseup', () => {
+      if (mouseDown) { mouseDown = false; resetJoystick(); }
+    });
+
+    // ——— Jump button ———
+    const jumpBtn = document.getElementById('jump-btn');
+
+    function pressJump() {
+      jumpPressed = true;
+      jumpBtn.classList.add('pressed');
+    }
+    function releaseJump() {
+      jumpPressed = false;
+      jumpBtn.classList.remove('pressed');
+    }
+
+    jumpBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      pressJump();
+    }, { passive: false });
+    jumpBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      releaseJump();
+    });
+    jumpBtn.addEventListener('touchcancel', releaseJump);
+    jumpBtn.addEventListener('mousedown', e => { e.preventDefault(); pressJump(); });
+    jumpBtn.addEventListener('mouseup', releaseJump);
+    jumpBtn.addEventListener('mouseleave', releaseJump);
+
+    // Prevent context menu on long press
+    document.addEventListener('contextmenu', e => e.preventDefault());
 
     // Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      updateJoyMetrics();
     });
 
-    // Game logic
+    // ——— Game logic ———
     function resetGame() {
       score = 0;
       orbsCollected = 0;
@@ -382,11 +599,11 @@
       scoreEl.textContent = '0';
       timeEl.textContent = String(GAME_DURATION);
       orbsEl.textContent = '0';
-
-      // Respawn orbs
       orbs.forEach(o => scene.remove(o));
       orbs.length = 0;
       for (let i = 0; i < ORB_COUNT; i++) spawnOrb();
+      resetJoystick();
+      releaseJump();
     }
 
     function startGame() {
@@ -396,6 +613,10 @@
       gameOverScreen.classList.remove('visible');
       gameActive = true;
       clock.start();
+      // Hide instructions after a few seconds on mobile
+      if (isTouchDevice) {
+        setTimeout(() => instructions.classList.add('hidden'), 4000);
+      }
     }
 
     function endGame() {
@@ -403,25 +624,25 @@
       finalScoreEl.textContent = `Score : ${score}`;
       overlay.classList.remove('hidden');
       gameOverScreen.classList.add('visible');
+      resetJoystick();
+      releaseJump();
     }
 
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('restart-btn').addEventListener('click', startGame);
 
-    // Collision helpers
     function distanceXZ(a, b) {
       const dx = a.x - b.x;
       const dz = a.z - b.z;
       return Math.sqrt(dx * dx + dz * dz);
     }
 
-    // Main loop
+    // ——— Main loop ———
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.05);
 
       if (gameActive) {
-        // Timer
         timeLeft -= dt;
         if (timeLeft <= 0) {
           timeLeft = 0;
@@ -429,21 +650,30 @@
         }
         timeEl.textContent = Math.ceil(timeLeft);
 
-        // Movement
+        // Movement: keyboard OR joystick (Roblox continuous)
         let moveX = 0, moveZ = 0;
+
+        // Keyboard
         if (keys['KeyW'] || keys['ArrowUp'] || keys['KeyZ']) moveZ -= 1;
         if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
         if (keys['KeyA'] || keys['ArrowLeft'] || keys['KeyQ']) moveX -= 1;
         if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
-        // Touch
-        moveX += Math.max(-1, Math.min(1, touchDx));
-        moveZ += Math.max(-1, Math.min(1, touchDy));
+        // Joystick (priority / additive)
+        if (joyActive) {
+          moveX += joyDX;
+          moveZ += joyDZ;
+        }
 
         const len = Math.hypot(moveX, moveZ);
-        if (len > 0) {
+        if (len > 1) {
           moveX /= len;
           moveZ /= len;
+        } else if (len > 0.05) {
+          // Keep magnitude for analog feel (Roblox-like)
+        } else {
+          moveX = 0;
+          moveZ = 0;
         }
 
         player.position.x += moveX * PLAYER_SPEED * dt;
@@ -454,8 +684,8 @@
         player.position.x = Math.max(-half, Math.min(half, player.position.x));
         player.position.z = Math.max(-half, Math.min(half, player.position.z));
 
-        // Jump
-        if (keys['Space'] && isGrounded) {
+        // Jump (keyboard Space or mobile button)
+        if ((keys['Space'] || jumpPressed) && isGrounded) {
           velocityY = JUMP_FORCE;
           isGrounded = false;
         }
@@ -471,7 +701,6 @@
         // Collect orbs
         for (let i = orbs.length - 1; i >= 0; i--) {
           const orb = orbs[i];
-          // Float animation
           orb.position.y = orb.userData.baseY + Math.sin(clock.elapsedTime * 2.5 + orb.userData.phase) * 0.25;
           orb.rotation.y += dt * 1.5;
           orb.rotation.x += dt * 0.8;
@@ -483,18 +712,15 @@
             orbsCollected++;
             scoreEl.textContent = score;
             orbsEl.textContent = orbsCollected;
-
-            // Spawn replacement farther away
             if (orbs.length < ORB_COUNT - 3) spawnOrb();
           }
         }
 
-        // Obstacle collision (penalty)
+        // Obstacles
         for (const obs of obstacles) {
           if (distanceXZ(player.position, obs.position) < 1.6 && Math.abs(player.position.y - obs.position.y) < 1.8) {
             score = Math.max(0, score - 50);
             scoreEl.textContent = score;
-            // Knockback
             const dx = player.position.x - obs.position.x;
             const dz = player.position.z - obs.position.z;
             const d = Math.hypot(dx, dz) || 1;
@@ -506,22 +732,22 @@
         }
       }
 
-      // Camera follow (smooth)
+      // Camera follow
       const targetPos = player.position.clone().add(cameraOffset);
       camera.position.lerp(targetPos, 1 - Math.pow(0.001, dt));
       cameraLook.copy(player.position);
       cameraLook.y += 1.5;
       camera.lookAt(cameraLook);
 
-      // Rotate player slightly based on movement for polish
-      if (gameActive) {
-        player.rotation.y += dt * 0.5;
-      }
+      if (gameActive) player.rotation.y += dt * 0.5;
 
       renderer.render(scene, camera);
     }
 
     animate();
+
+    // Initial metrics
+    setTimeout(updateJoyMetrics, 100);
   </script>
 </body>
 </html>
