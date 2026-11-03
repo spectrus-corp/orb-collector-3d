@@ -161,7 +161,6 @@
   </script>
   <script type="module">
     import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     // ——— Config ———
     const GAME_DURATION = 60;
@@ -188,7 +187,7 @@
     scene.background = new THREE.Color(0x0a0a18);
     scene.fog = new THREE.Fog(0x0a0a18, 25, 90);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, e);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(0, 12, 18);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
