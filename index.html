@@ -242,6 +242,152 @@
       #mobile-controls { display: none !important; }
       #instructions { bottom: 28px; }
     }
+
+    /* ——— Shop button in HUD ——— */
+    #shop-btn {
+      pointer-events: auto;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      border: 1px solid rgba(167, 139, 250, 0.5);
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-size: clamp(0.85rem, 3.5vw, 1.05rem);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+      white-space: nowrap;
+    }
+    #shop-btn:active { transform: scale(0.96); }
+
+    /* ——— Shop modal ——— */
+    #shop-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 5, 15, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 40;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+      overflow-y: auto;
+      pointer-events: auto;
+    }
+    #shop-overlay.open { display: flex; }
+    #shop-header {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #shop-header h2 {
+      font-size: clamp(1.3rem, 5vw, 1.7rem);
+      background: linear-gradient(135deg, #c4b5fd, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+    #shop-close {
+      background: rgba(40, 40, 70, 0.9);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      color: #e0e0ff;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #shop-meta {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      font-size: clamp(0.8rem, 3vw, 0.95rem);
+    }
+    #shop-meta .pill {
+      background: rgba(20, 20, 40, 0.85);
+      border: 1px solid rgba(120, 100, 255, 0.35);
+      border-radius: 10px;
+      padding: 6px 12px;
+    }
+    #shop-meta span { color: #a78bfa; font-weight: 700; }
+    #shop-items {
+      width: 100%;
+      max-width: 520px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .shop-card {
+      background: rgba(22, 22, 45, 0.92);
+      border: 1px solid rgba(120, 100, 255, 0.3);
+      border-radius: 14px;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+      min-height: 150px;
+    }
+    .shop-card.owned { border-color: rgba(52, 211, 153, 0.55); }
+    .shop-card.equipped { box-shadow: 0 0 0 2px #a78bfa; }
+    .shop-card .rarity {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .rarity-common { background: rgba(156, 163, 175, 0.25); color: #d1d5db; }
+    .rarity-rare { background: rgba(59, 130, 246, 0.25); color: #93c5fd; }
+    .rarity-epic { background: rgba(168, 85, 247, 0.3); color: #d8b4fe; }
+    .rarity-legendary { background: rgba(245, 158, 11, 0.3); color: #fcd34d; }
+    .shop-card .name { font-weight: 700; font-size: 0.95rem; line-height: 1.2; }
+    .shop-card .type { font-size: 0.72rem; opacity: 0.7; }
+    .shop-card .price { color: #c4b5fd; font-weight: 700; font-size: 0.9rem; }
+    .shop-card .preview {
+      width: 36px; height: 36px; border-radius: 50%;
+      margin: 4px 0;
+      box-shadow: 0 0 12px currentColor;
+    }
+    .shop-card button {
+      margin-top: auto;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.85rem;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+    }
+    .shop-card button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .shop-card button.equip-btn {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+    .shop-card button.unequip-btn {
+      background: rgba(60, 60, 90, 0.9);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+    }
+    #shop-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      opacity: 0.7;
+      padding: 24px;
+    }
   </style>
 </head>
 <body>
@@ -250,6 +396,8 @@
       <div class="stat">Score : <span id="score">0</span></div>
       <div class="stat">Temps : <span id="time">60</span>s</div>
       <div class="stat">Orbes : <span id="orbs">0</span></div>
+      <div class="stat">Banque : <span id="total-orbs">0</span></div>
+      <button id="shop-btn" type="button">Boutique</button>
     </div>
 
     <div id="instructions">
@@ -286,6 +434,19 @@
     </div>
   </div>
 
+  <!-- Boutique -->
+  <div id="shop-overlay" aria-hidden="true">
+    <div id="shop-header">
+      <h2>Boutique</h2>
+      <button id="shop-close" type="button">Fermer</button>
+    </div>
+    <div id="shop-meta">
+      <div class="pill">Orbes : <span id="shop-orbs">0</span></div>
+      <div class="pill">Refresh dans <span id="shop-timer">10:00</span></div>
+    </div>
+    <div id="shop-items"></div>
+  </div>
+
   <script type="importmap">
   {
     "imports": {
@@ -320,6 +481,281 @@
     let joyDX = 0; // -1 .. 1
     let joyDZ = 0;
     let jumpPressed = false;
+
+    // ——— Shop / Cosmetics (orbs persistants) ———
+    const SHOP_REFRESH_MS = 10 * 60 * 1000; // 10 minutes
+    const SHOP_SLOT_COUNT = 6;
+    const LS_ORBS = 'orbCollector_totalOrbs';
+    const LS_OWNED = 'orbCollector_owned';
+    const LS_EQUIP = 'orbCollector_equipped';
+    const LS_SHOP = 'orbCollector_shopState';
+
+    const RARITY = {
+      common:    { weight: 55, minPrice: 10000,  maxPrice: 25000,  label: 'Commun',    cls: 'rarity-common' },
+      rare:      { weight: 28, minPrice: 35000,  maxPrice: 70000,  label: 'Rare',      cls: 'rarity-rare' },
+      epic:      { weight: 12, minPrice: 90000,  maxPrice: 160000, label: 'Épique',    cls: 'rarity-epic' },
+      legendary: { weight: 5,  minPrice: 220000, maxPrice: 450000, label: 'Légendaire', cls: 'rarity-legendary' }
+    };
+
+    // Catalogue (id unique)
+    const CATALOG = [
+      // Skins
+      { id: 'skin_azure', name: 'Azur', type: 'skin', rarity: 'common', color: 0x60a5fa, emissive: 0x1e3a8a },
+      { id: 'skin_emerald', name: 'Émeraude', type: 'skin', rarity: 'common', color: 0x34d399, emissive: 0x065f46 },
+      { id: 'skin_crimson', name: 'Cramoisi', type: 'skin', rarity: 'rare', color: 0xf43f5e, emissive: 0x9f1239 },
+      { id: 'skin_gold', name: 'Or solaire', type: 'skin', rarity: 'epic', color: 0xfbbf24, emissive: 0xb45309 },
+      { id: 'skin_void', name: 'Néant', type: 'skin', rarity: 'legendary', color: 0x1e1b4b, emissive: 0x7c3aed },
+      { id: 'skin_prism', name: 'Prisme', type: 'skin', rarity: 'legendary', color: 0xe879f9, emissive: 0x86198f },
+      // Auras
+      { id: 'aura_soft', name: 'Halo doux', type: 'aura', rarity: 'common', color: 0xa78bfa, intensity: 1.4, dist: 7 },
+      { id: 'aura_ice', name: 'Aura de glace', type: 'aura', rarity: 'rare', color: 0x67e8f9, intensity: 1.8, dist: 8 },
+      { id: 'aura_flame', name: 'Aura flamme', type: 'aura', rarity: 'epic', color: 0xfb923c, intensity: 2.2, dist: 9 },
+      { id: 'aura_cosmic', name: 'Cosmique', type: 'aura', rarity: 'legendary', color: 0xc084fc, intensity: 2.8, dist: 11 },
+      // Trails
+      { id: 'trail_spark', name: 'Étincelles', type: 'trail', rarity: 'common', color: 0xc4b5fd, size: 0.18 },
+      { id: 'trail_leaf', name: 'Feuilles', type: 'trail', rarity: 'rare', color: 0x86efac, size: 0.2 },
+      { id: 'trail_fire', name: 'Trainée de feu', type: 'trail', rarity: 'epic', color: 0xf97316, size: 0.22 },
+      { id: 'trail_stardust', name: "Poussière d'étoiles", type: 'trail', rarity: 'legendary', color: 0xfde68a, size: 0.26 }
+    ];
+
+    let totalOrbs = parseInt(localStorage.getItem(LS_ORBS) || '0', 10) || 0;
+    let owned = JSON.parse(localStorage.getItem(LS_OWNED) || '[]');
+    let equipped = JSON.parse(localStorage.getItem(LS_EQUIP) || '{}');
+    let shopState = null;
+
+    const totalOrbsEl = document.getElementById('total-orbs');
+    const shopOrbsEl = document.getElementById('shop-orbs');
+    const shopTimerEl = document.getElementById('shop-timer');
+    const shopOverlay = document.getElementById('shop-overlay');
+    const shopItemsEl = document.getElementById('shop-items');
+    const shopBtn = document.getElementById('shop-btn');
+    const shopClose = document.getElementById('shop-close');
+
+    function saveProgress() {
+      localStorage.setItem(LS_ORBS, String(totalOrbs));
+      localStorage.setItem(LS_OWNED, JSON.stringify(owned));
+      localStorage.setItem(LS_EQUIP, JSON.stringify(equipped));
+      if (shopState) localStorage.setItem(LS_SHOP, JSON.stringify(shopState));
+      if (totalOrbsEl) totalOrbsEl.textContent = totalOrbs.toLocaleString('fr-FR');
+      if (shopOrbsEl) shopOrbsEl.textContent = totalOrbs.toLocaleString('fr-FR');
+    }
+
+    function pickRarity() {
+      const totalW = Object.values(RARITY).reduce((s, r) => s + r.weight, 0);
+      let roll = Math.random() * totalW;
+      for (const [key, r] of Object.entries(RARITY)) {
+        roll -= r.weight;
+        if (roll <= 0) return key;
+      }
+      return 'common';
+    }
+
+    function priceFor(rarityKey) {
+      const r = RARITY[rarityKey];
+      const p = Math.floor(r.minPrice + Math.random() * (r.maxPrice - r.minPrice));
+      return Math.max(10000, Math.round(p / 500) * 500);
+    }
+
+    function generateShopItems() {
+      const items = [];
+      const used = new Set();
+      let guard = 0;
+      while (items.length < SHOP_SLOT_COUNT && guard++ < 80) {
+        const rarity = pickRarity();
+        const pool = CATALOG.filter(c => c.rarity === rarity && !used.has(c.id));
+        if (!pool.length) continue;
+        const item = pool[Math.floor(Math.random() * pool.length)];
+        used.add(item.id);
+        items.push({ id: item.id, price: priceFor(rarity) });
+      }
+      while (items.length < SHOP_SLOT_COUNT) {
+        const item = CATALOG[Math.floor(Math.random() * CATALOG.length)];
+        if (used.has(item.id)) continue;
+        used.add(item.id);
+        items.push({ id: item.id, price: priceFor(item.rarity) });
+      }
+      return items;
+    }
+
+    function ensureShopState() {
+      const now = Date.now();
+      try {
+        shopState = JSON.parse(localStorage.getItem(LS_SHOP) || 'null');
+      } catch { shopState = null; }
+      if (!shopState || !shopState.refreshAt || !Array.isArray(shopState.items) || now >= shopState.refreshAt) {
+        shopState = { refreshAt: now + SHOP_REFRESH_MS, items: generateShopItems() };
+        localStorage.setItem(LS_SHOP, JSON.stringify(shopState));
+      }
+    }
+
+    function formatCountdown(ms) {
+      const s = Math.max(0, Math.ceil(ms / 1000));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${m}:${String(r).padStart(2, '0')}`;
+    }
+
+    let trailParticles = null;
+    let trailPositions = null;
+    let trailIdx = 0;
+    const TRAIL_COUNT = 48;
+    let auraLight = null;
+
+    function getCatalogItem(id) {
+      return CATALOG.find(c => c.id === id);
+    }
+
+    function applyCosmetics() {
+      if (typeof player === 'undefined') return;
+      const skin = getCatalogItem(equipped.skin);
+      if (skin && skin.type === 'skin') {
+        player.material.color.setHex(skin.color);
+        player.material.emissive.setHex(skin.emissive);
+        playerGlow.color.setHex(skin.color);
+      } else {
+        player.material.color.setHex(0x60a5fa);
+        player.material.emissive.setHex(0x1e3a8a);
+        playerGlow.color.setHex(0x60a5fa);
+      }
+
+      if (auraLight) {
+        player.remove(auraLight);
+        auraLight = null;
+      }
+      const aura = getCatalogItem(equipped.aura);
+      if (aura && aura.type === 'aura') {
+        auraLight = new THREE.PointLight(aura.color, aura.intensity, aura.dist);
+        player.add(auraLight);
+      }
+
+      if (trailParticles) {
+        scene.remove(trailParticles);
+        trailParticles.geometry.dispose();
+        trailParticles.material.dispose();
+        trailParticles = null;
+        trailPositions = null;
+      }
+      const trail = getCatalogItem(equipped.trail);
+      if (trail && trail.type === 'trail') {
+        const geo = new THREE.BufferGeometry();
+        trailPositions = new Float32Array(TRAIL_COUNT * 3);
+        for (let i = 0; i < TRAIL_COUNT; i++) {
+          trailPositions[i * 3] = player.position.x;
+          trailPositions[i * 3 + 1] = player.position.y;
+          trailPositions[i * 3 + 2] = player.position.z;
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+        const mat = new THREE.PointsMaterial({
+          color: trail.color,
+          size: trail.size,
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+        trailParticles = new THREE.Points(geo, mat);
+        scene.add(trailParticles);
+        trailIdx = 0;
+      }
+    }
+
+    function updateTrail() {
+      if (!trailParticles || !trailPositions) return;
+      trailIdx = (trailIdx + 1) % TRAIL_COUNT;
+      trailPositions[trailIdx * 3] = player.position.x;
+      trailPositions[trailIdx * 3 + 1] = player.position.y;
+      trailPositions[trailIdx * 3 + 2] = player.position.z;
+      trailParticles.geometry.attributes.position.needsUpdate = true;
+    }
+
+    function renderShop() {
+      ensureShopState();
+      saveProgress();
+      shopItemsEl.innerHTML = '';
+      if (!shopState.items.length) {
+        shopItemsEl.innerHTML = '<div id="shop-empty">Aucun objet pour le moment.</div>';
+        return;
+      }
+      for (const slot of shopState.items) {
+        const item = getCatalogItem(slot.id);
+        if (!item) continue;
+        const r = RARITY[item.rarity];
+        const isOwned = owned.includes(item.id);
+        const isEquipped = equipped[item.type] === item.id;
+        const card = document.createElement('div');
+        card.className = 'shop-card' + (isOwned ? ' owned' : '') + (isEquipped ? ' equipped' : '');
+        const previewColor = '#' + (item.color >>> 0).toString(16).padStart(6, '0');
+        card.innerHTML = `
+          <div class="rarity ${r.cls}">${r.label}</div>
+          <div class="preview" style="background:${previewColor};color:${previewColor}"></div>
+          <div class="name">${item.name}</div>
+          <div class="type">${item.type === 'skin' ? 'Skin' : item.type === 'aura' ? 'Aura' : 'Trail'}</div>
+          <div class="price">${isOwned ? 'Possédé' : slot.price.toLocaleString('fr-FR') + ' orbes'}</div>
+        `;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        if (isEquipped) {
+          btn.textContent = 'Équipé';
+          btn.className = 'unequip-btn';
+          btn.addEventListener('click', () => {
+            delete equipped[item.type];
+            applyCosmetics();
+            saveProgress();
+            renderShop();
+          });
+        } else if (isOwned) {
+          btn.textContent = 'Équiper';
+          btn.className = 'equip-btn';
+          btn.addEventListener('click', () => {
+            equipped[item.type] = item.id;
+            applyCosmetics();
+            saveProgress();
+            renderShop();
+          });
+        } else {
+          btn.textContent = 'Acheter';
+          if (totalOrbs < slot.price) btn.disabled = true;
+          btn.addEventListener('click', () => {
+            if (totalOrbs < slot.price || owned.includes(item.id)) return;
+            totalOrbs -= slot.price;
+            owned.push(item.id);
+            equipped[item.type] = item.id;
+            applyCosmetics();
+            saveProgress();
+            renderShop();
+          });
+        }
+        card.appendChild(btn);
+        shopItemsEl.appendChild(card);
+      }
+    }
+
+    function openShop() {
+      ensureShopState();
+      renderShop();
+      shopOverlay.classList.add('open');
+      shopOverlay.setAttribute('aria-hidden', 'false');
+    }
+    function closeShop() {
+      shopOverlay.classList.remove('open');
+      shopOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    shopBtn.addEventListener('click', (e) => { e.stopPropagation(); openShop(); });
+    shopClose.addEventListener('click', closeShop);
+
+    setInterval(() => {
+      ensureShopState();
+      const left = shopState.refreshAt - Date.now();
+      if (shopTimerEl) shopTimerEl.textContent = formatCountdown(left);
+      if (left <= 0) {
+        shopState = { refreshAt: Date.now() + SHOP_REFRESH_MS, items: generateShopItems() };
+        localStorage.setItem(LS_SHOP, JSON.stringify(shopState));
+        if (shopOverlay.classList.contains('open')) renderShop();
+      }
+    }, 1000);
+
+    saveProgress();
 
     // Detect touch / mobile
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -487,7 +923,6 @@
       }
       joyKnob.style.left = `calc(50% + ${nx}px)`;
       joyKnob.style.top = `calc(50% + ${ny}px)`;
-      // Normalized -1..1 (Y inverted for movement: up = negative Z)
       joyDX = nx / max;
       joyDZ = ny / max;
     }
@@ -533,7 +968,6 @@
     });
     joyZone.addEventListener('touchcancel', resetJoystick);
 
-    // Also support mouse for testing on desktop
     let mouseDown = false;
     joyZone.addEventListener('mousedown', e => {
       if (!isTouchDevice) {
@@ -577,18 +1011,14 @@
     jumpBtn.addEventListener('mouseup', releaseJump);
     jumpBtn.addEventListener('mouseleave', releaseJump);
 
-    // Prevent context menu on long press
     document.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      updateJoyMetrics();
     });
 
-    // ——— Game logic ———
     function resetGame() {
       score = 0;
       orbsCollected = 0;
@@ -613,7 +1043,6 @@
       gameOverScreen.classList.remove('visible');
       gameActive = true;
       clock.start();
-      // Hide instructions after a few seconds on mobile
       if (isTouchDevice) {
         setTimeout(() => instructions.classList.add('hidden'), 4000);
       }
@@ -637,7 +1066,6 @@
       return Math.sqrt(dx * dx + dz * dz);
     }
 
-    // ——— Main loop ———
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.05);
@@ -650,16 +1078,13 @@
         }
         timeEl.textContent = Math.ceil(timeLeft);
 
-        // Movement: keyboard OR joystick (Roblox continuous)
         let moveX = 0, moveZ = 0;
 
-        // Keyboard
         if (keys['KeyW'] || keys['ArrowUp'] || keys['KeyZ']) moveZ -= 1;
         if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
         if (keys['KeyA'] || keys['ArrowLeft'] || keys['KeyQ']) moveX -= 1;
         if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
-        // Joystick (priority / additive)
         if (joyActive) {
           moveX += joyDX;
           moveZ += joyDZ;
@@ -670,7 +1095,6 @@
           moveX /= len;
           moveZ /= len;
         } else if (len > 0.05) {
-          // Keep magnitude for analog feel (Roblox-like)
         } else {
           moveX = 0;
           moveZ = 0;
@@ -679,12 +1103,10 @@
         player.position.x += moveX * PLAYER_SPEED * dt;
         player.position.z += moveZ * PLAYER_SPEED * dt;
 
-        // Bounds
         const half = WORLD_SIZE / 2 - 1.5;
         player.position.x = Math.max(-half, Math.min(half, player.position.x));
         player.position.z = Math.max(-half, Math.min(half, player.position.z));
 
-        // Jump (keyboard Space or mobile button)
         if ((keys['Space'] || jumpPressed) && isGrounded) {
           velocityY = JUMP_FORCE;
           isGrounded = false;
@@ -698,7 +1120,6 @@
           isGrounded = true;
         }
 
-        // Collect orbs
         for (let i = orbs.length - 1; i >= 0; i--) {
           const orb = orbs[i];
           orb.position.y = orb.userData.baseY + Math.sin(clock.elapsedTime * 2.5 + orb.userData.phase) * 0.25;
@@ -710,13 +1131,14 @@
             orbs.splice(i, 1);
             score += 100;
             orbsCollected++;
+            totalOrbs += 1;
             scoreEl.textContent = score;
             orbsEl.textContent = orbsCollected;
+            saveProgress();
             if (orbs.length < ORB_COUNT - 3) spawnOrb();
           }
         }
 
-        // Obstacles
         for (const obs of obstacles) {
           if (distanceXZ(player.position, obs.position) < 1.6 && Math.abs(player.position.y - obs.position.y) < 1.8) {
             score = Math.max(0, score - 50);
@@ -732,7 +1154,8 @@
         }
       }
 
-      // Camera follow
+      if (typeof updateTrail === 'function') updateTrail();
+
       const targetPos = player.position.clone().add(cameraOffset);
       camera.position.lerp(targetPos, 1 - Math.pow(0.001, dt));
       cameraLook.copy(player.position);
@@ -746,8 +1169,8 @@
 
     animate();
 
-    // Initial metrics
     setTimeout(updateJoyMetrics, 100);
+    if (typeof applyCosmetics === 'function') applyCosmetics();
   </script>
 </body>
 </html>
