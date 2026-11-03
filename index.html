@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Orb Collector 3D</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      background: #0a0a12;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0ff;
+      user-select: none;
+      touch-action: none;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    #ui {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+      background: linear-gradient(to bottom, rgba(10,10,20,0.7), transparent);
+    }
+    .stat {
+      background: rgba(20, 20, 40, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(120, 100, 255, 0.35);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .stat span { color: #a78bfa; }
+    #instructions {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 15, 30, 0.85);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 16px;
+      padding: 14px 24px;
+      font-size: 0.95rem;
+      text-align: center;
+      pointer-events: none;
+      z-index: 10;
+      max-width: 90vw;
+      line-height: 1.5;
+    }
+    #instructions kbd {
+      display: inline-block;
+      background: rgba(139, 92, 246, 0.25);
+      border: 1px solid rgba(167, 139, 250, 0.5);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-family: inherit;
+      font-size: 0.85em;
+      margin: 0 2px;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(15,10,40,0.92), rgba(5,5,15,0.97));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      transition: opacity 0.4s ease;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    #overlay h1 {
+      font-size: clamp(2.2rem, 8vw, 3.8rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #c4b5fd, #818cf8, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+    #overlay p {
+      font-size: 1.15rem;
+      opacity: 0.85;
+      margin-bottom: 28px;
+      max-width: 420px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    #start-btn, #restart-btn {
+      pointer-events: auto;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 42px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(124, 58, 237, 0.45);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #start-btn:hover, #restart-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(124, 58, 237, 0.55);
+    }
+    #final-score {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      color: #c4b5fd;
+      font-weight: 600;
+    }
+    #game-over { display: none; }
+    #game-over.visible { display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <div id="ui">
+      <div class="stat">Score : <span id="score">0</span></div>
+      <div class="stat">Temps : <span id="time">60</span>s</div>
+      <div class="stat">Orbes : <span id="orbs">0</span></div>
+    </div>
+    <div id="instructions">
+      <kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou flèches pour bouger ·
+      <kbd>Espace</kbd> pour sauter · Collecte les orbes violettes !
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="start-screen">
+      <h1>Orb Collector 3D</h1>
+      <p>Course dans un monde 3D, collectez le maximum d'orbes avant la fin du temps. Évitez les obstacles rouges !</p>
+      <button id="start-btn">Jouer</button>
+    </div>
+    <div id="game-over">
+      <h1>Partie terminée</h1>
+      <div id="final-score">Score : 0</div>
+      <button id="restart-btn">Rejouer</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ——— Config ———
+    const GAME_DURATION = 60;
+    const PLAYER_SPEED = 12;
+    const JUMP_FORCE = 14;
+    const GRAVITY = 28;
+    const WORLD_SIZE = 80;
+    const ORB_COUNT = 25;
+    const OBSTACLE_COUNT = 18;
+
+    // ——— State ———
+    let score = 0;
+    let orbsCollected = 0;
+    let timeLeft = GAME_DURATION;
+    let gameActive = false;
+    let clock = new THREE.Clock();
+    let keys = {};
+    let velocityY = 0;
+    let isGrounded = true;
+
+    // ——— Scene setup ———
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a18);
+    scene.fog = new THREE.Fog(0x0a0a18, 25, 90);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, e);
+    camera.position.set(0, 12, 18);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0x404060, 1.2);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight.position.set(20, 40, 15);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 100;
+    dirLight.shadow.camera.left = -40;
+    dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    scene.add(dirLight);
+
+    const hemi = new THREE.HemisphereLight(0x8899ff, 0x223344, 0.6);
+    scene.add(hemi);
+
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 32, 32);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1a2e,
+      roughness: 0.85,
+      metalness: 0.15,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Grid helper subtle
+    const grid = new THREE.GridHelper(WORLD_SIZE, 40, 0x2a2a4a, 0x1a1a30);
+    grid.position.y = 0.01;
+    scene.add(grid);
+
+    // Player
+    const playerGeo = new THREE.SphereGeometry(0.7, 32, 32);
+    const playerMat = new THREE.MeshStandardMaterial({
+      color: 0x60a5fa,
+      emissive: 0x1e3a8a,
+      emissiveIntensity: 0.35,
+      roughness: 0.3,
+      metalness: 0.6,
+    });
+    const player = new THREE.Mesh(playerGeo, playerMat);
+    player.position.set(0, 0.7, 0);
+    player.castShadow = true;
+    scene.add(player);
+
+    // Player glow
+    const playerGlow = new THREE.PointLight(0x60a5fa, 1.2, 8);
+    player.add(playerGlow);
+
+    // Orbs
+    const orbs = [];
+    const orbGeo = new THREE.IcosahedronGeometry(0.45, 1);
+    const orbMat = new THREE.MeshStandardMaterial({
+      color: 0xc084fc,
+      emissive: 0x7c3aed,
+      emissiveIntensity: 0.9,
+      roughness: 0.2,
+      metalness: 0.4,
+    });
+
+    function spawnOrb() {
+      const orb = new THREE.Mesh(orbGeo, orbMat.clone());
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 5 + Math.random() * (WORLD_SIZE / 2 - 8);
+      orb.position.set(
+        Math.cos(angle) * radius,
+        0.6 + Math.random() * 1.5,
+        Math.sin(angle) * radius
+      );
+      orb.userData = { baseY: orb.position.y, phase: Math.random() * Math.PI * 2 };
+      orb.castShadow = true;
+      scene.add(orb);
+      orbs.push(orb);
+
+      // light
+      const light = new THREE.PointLight(0xc084fc, 0.8, 6);
+      orb.add(light);
+    }
+
+    for (let i = 0; i < ORB_COUNT; i++) spawnOrb();
+
+    // Obstacles
+    const obstacles = [];
+    const obsGeo = new THREE.BoxGeometry(1.6, 2.2, 1.6);
+    const obsMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0x7f1d1d,
+      emissiveIntensity: 0.4,
+      roughness: 0.5,
+    });
+
+    for (let i = 0; i < OBSTACLE_COUNT; i++) {
+      const obs = new THREE.Mesh(obsGeo, obsMat);
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 8 + Math.random() * (WORLD_SIZE / 2 - 12);
+      obs.position.set(
+        Math.cos(angle) * radius,
+        1.1,
+        Math.sin(angle) * radius
+      );
+      obs.castShadow = true;
+      obs.receiveShadow = true;
+      scene.add(obs);
+      obstacles.push(obs);
+    }
+
+    // Particles (stars)
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 400;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 180;
+      positions[i * 3 + 1] = Math.random() * 60 + 10;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 180;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xa5b4fc, size: 0.25, transparent: true, opacity: 0.8 });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // Camera follow
+    const cameraOffset = new THREE.Vector3(0, 10, 14);
+    const cameraLook = new THREE.Vector3();
+
+    // UI elements
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const orbsEl = document.getElementById('orbs');
+    const overlay = document.getElementById('overlay');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over');
+    const finalScoreEl = document.getElementById('final-score');
+
+    // Input
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    // Touch controls (simple virtual pad for mobile)
+    let touchStartX = 0, touchStartY = 0;
+    let touchDx = 0, touchDy = 0;
+    renderer.domElement.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchDx = 0; touchDy = 0;
+      }
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchmove', e => {
+      if (e.touches.length === 1) {
+        touchDx = (e.touches[0].clientX - touchStartX) / 40;
+        touchDy = (e.touches[0].clientY - touchStartY) / 40;
+      }
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchend', () => {
+      touchDx = 0; touchDy = 0;
+    });
+
+    // Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Game logic
+    function resetGame() {
+      score = 0;
+      orbsCollected = 0;
+      timeLeft = GAME_DURATION;
+      velocityY = 0;
+      isGrounded = true;
+      player.position.set(0, 0.7, 0);
+      scoreEl.textContent = '0';
+      timeEl.textContent = String(GAME_DURATION);
+      orbsEl.textContent = '0';
+
+      // Respawn orbs
+      orbs.forEach(o => scene.remove(o));
+      orbs.length = 0;
+      for (let i = 0; i < ORB_COUNT; i++) spawnOrb();
+    }
+
+    function startGame() {
+      resetGame();
+      overlay.classList.add('hidden');
+      startScreen.style.display = 'none';
+      gameOverScreen.classList.remove('visible');
+      gameActive = true;
+      clock.start();
+    }
+
+    function endGame() {
+      gameActive = false;
+      finalScoreEl.textContent = `Score : ${score}`;
+      overlay.classList.remove('hidden');
+      gameOverScreen.classList.add('visible');
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', startGame);
+
+    // Collision helpers
+    function distanceXZ(a, b) {
+      const dx = a.x - b.x;
+      const dz = a.z - b.z;
+      return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    // Main loop
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      if (gameActive) {
+        // Timer
+        timeLeft -= dt;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          endGame();
+        }
+        timeEl.textContent = Math.ceil(timeLeft);
+
+        // Movement
+        let moveX = 0, moveZ = 0;
+        if (keys['KeyW'] || keys['ArrowUp'] || keys['KeyZ']) moveZ -= 1;
+        if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
+        if (keys['KeyA'] || keys['ArrowLeft'] || keys['KeyQ']) moveX -= 1;
+        if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+
+        // Touch
+        moveX += Math.max(-1, Math.min(1, touchDx));
+        moveZ += Math.max(-1, Math.min(1, touchDy));
+
+        const len = Math.hypot(moveX, moveZ);
+        if (len > 0) {
+          moveX /= len;
+          moveZ /= len;
+        }
+
+        player.position.x += moveX * PLAYER_SPEED * dt;
+        player.position.z += moveZ * PLAYER_SPEED * dt;
+
+        // Bounds
+        const half = WORLD_SIZE / 2 - 1.5;
+        player.position.x = Math.max(-half, Math.min(half, player.position.x));
+        player.position.z = Math.max(-half, Math.min(half, player.position.z));
+
+        // Jump
+        if (keys['Space'] && isGrounded) {
+          velocityY = JUMP_FORCE;
+          isGrounded = false;
+        }
+
+        velocityY -= GRAVITY * dt;
+        player.position.y += velocityY * dt;
+        if (player.position.y <= 0.7) {
+          player.position.y = 0.7;
+          velocityY = 0;
+          isGrounded = true;
+        }
+
+        // Collect orbs
+        for (let i = orbs.length - 1; i >= 0; i--) {
+          const orb = orbs[i];
+          // Float animation
+          orb.position.y = orb.userData.baseY + Math.sin(clock.elapsedTime * 2.5 + orb.userData.phase) * 0.25;
+          orb.rotation.y += dt * 1.5;
+          orb.rotation.x += dt * 0.8;
+
+          if (distanceXZ(player.position, orb.position) < 1.3) {
+            scene.remove(orb);
+            orbs.splice(i, 1);
+            score += 100;
+            orbsCollected++;
+            scoreEl.textContent = score;
+            orbsEl.textContent = orbsCollected;
+
+            // Spawn replacement farther away
+            if (orbs.length < ORB_COUNT - 3) spawnOrb();
+          }
+        }
+
+        // Obstacle collision (penalty)
+        for (const obs of obstacles) {
+          if (distanceXZ(player.position, obs.position) < 1.6 && Math.abs(player.position.y - obs.position.y) < 1.8) {
+            score = Math.max(0, score - 50);
+            scoreEl.textContent = score;
+            // Knockback
+            const dx = player.position.x - obs.position.x;
+            const dz = player.position.z - obs.position.z;
+            const d = Math.hypot(dx, dz) || 1;
+            player.position.x += (dx / d) * 1.2;
+            player.position.z += (dz / d) * 1.2;
+            velocityY = 6;
+            isGrounded = false;
+          }
+        }
+      }
+
+      // Camera follow (smooth)
+      const targetPos = player.position.clone().add(cameraOffset);
+      camera.position.lerp(targetPos, 1 - Math.pow(0.001, dt));
+      cameraLook.copy(player.position);
+      cameraLook.y += 1.5;
+      camera.lookAt(cameraLook);
+
+      // Rotate player slightly based on movement for polish
+      if (gameActive) {
+        player.rotation.y += dt * 0.5;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
